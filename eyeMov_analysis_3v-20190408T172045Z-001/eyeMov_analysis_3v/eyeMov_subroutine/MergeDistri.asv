@@ -1,0 +1,113 @@
+
+function LoadingFile
+[FolderName,FolderPath] = uigetfile('H:\TURN TABLE\library','*.mat');
+load([FolderPath,FolderName]);
+
+LR='LR'
+IndexPro=2;
+for i=1:2 %faster stimulation direction or seeing eye
+    index=find(strcmp(LR(i),library.data(:,4)));
+    for d=1:length(index)
+        load([library.data{index(d),3},library.data{index(d),2}]);
+        MergeDATA.([LR(i)])(d)=data;
+    end
+    
+    [MergeDATA]=GetMergeVel(MergeDATA,LR(i));
+    %getting velocity by derivetive
+    MeanDistri(MergeDATA,LR(i),IndexPro); 
+    %mean of the velocity distribution; shaded area is std
+    StatMid(MergeDATA,LR(i),IndexPro); 
+    
+    % MidDistri
+    % MeanPAN
+    % MidPAN
+end
+end
+
+function [MergeDATA]=GetMergeVel(MergeDATA,LR)
+lr='lr'
+for j=1:2
+    for d=1:length(MergeDATA.([LR]));
+        eye_raw=MergeDATA.([LR])(d).([lr(j),'eye_raw']);
+        MergeDATA.([LR])(d).([lr(j),'vel'])=derivate(eye_raw,1/40);
+    end
+end
+end
+
+
+function MeanDistri(MergeDATA,LR,IndexPro);
+[protocol,protocol_name]=ProtocolLibrary(IndexPro);
+lr='lr';
+for j=1:2;
+    FigHandle = figure('Position', [0,0, 2000, 400]);
+    for i=2:length(protocol);
+        
+        %v=velocity s=datasize
+        for d=1:length(MergeDATA.([LR]));
+            VEL=MergeDATA.([LR])(d).([lr(j),'vel']);
+            TIME=MergeDATA.([LR])(d).(['time_',lr(j)]);
+            [VelBin,Datasize(:,d)]=sorting(TIME/60,protocol(i-1),protocol(i),VEL,1);
+        end
+        DATAmean=mean(Datasize,2);
+        DATAerr=std(Datasize,0,2);
+        
+        [vp,sp,vn,sn]=SortPN(VelBin,DATAmean);
+        [ERRvp,ERRsp,ERRvn,ERRsn]=SortPN(VelBin,DATAerr);
+        
+        %plot
+        xscale=[0 20];
+        yscale=[0 40];
+        subplot(1,length(protocol)-1,i-1)
+        
+        StairArea(vp,sp,'b','CCW',ERRsp)
+        hold on
+        StairArea(vn,sn,'r','CW',ERRsn)
+        
+        
+        xlim(xscale);
+        ylim(yscale);
+        set(gca,'XTick',[min(xlim):(max(xlim)-min(xlim))/4:max(xlim)]);
+        title(protocol_name(i-1),'FontSize',16);
+    end
+    set(gcf,'Color',[1 1 1]);
+    
+end
+end
+
+
+function StatMid(MergeDATA,LR,IndexPro)
+lr='lr';
+cut_point=50;
+[protocol,protocol_name]=ProtocolLibrary(IndexPro);
+for j=1:2
+    figure('Position', [0,0, 2000, 400]);
+    for i=2:length(protocol);
+        
+        for d=1:length(MergeDATA.([LR]));
+            
+            VEL=MergeDATA.([LR])(d).([lr(j),'vel']);
+            TIME=MergeDATA.([LR])(d).(['time_',lr(j)]);
+            [Pmean,Nmean,Pquant,Nquant]=quant_mean(TIME/60,protocol(i-1),protocol(i),VEL,cut_point);
+            Pmid.([lr(j)])(i-1,d)=Pquant;
+            Nmid.([lr(j)])(i-1,d)=abs(Nquant);
+            
+            p=i-1;
+            subplot(1,length(protocol)-1,i-1)
+            plot([p*2-1 p*2],[Pquant abs(Nquant)],'k-o')
+            hold on
+            plot(p*2-1,Pquant,'bo')
+            plot(p*2,abs(Nquant),'ro')
+            xlim([[p*2-1.5 p*2+0.5]]);
+            yscale=[5 20 5 20 5 5]
+            
+            if sum(p==[1 3 5 6])>0
+            set(gca,'Color',[.9 .9 .9])
+            ylim([0 yscale(p)])
+            end
+        end
+        
+    end
+    set(gcf,'Color',[1 1 1]);
+    set(gca,'xtick',[1.5:2:11.5],'xticklabel',protocol_name);
+end
+end

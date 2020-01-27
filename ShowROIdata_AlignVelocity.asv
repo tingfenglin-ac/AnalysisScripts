@@ -1,0 +1,69 @@
+addpath('C:\Users\lab\Desktop\scripts\subroutine');
+
+%% configure
+paw_move=0; %%if the paw movement will be included in the figure choose 1, or choose others  
+vel_ana=0; %if the motion activity will be included in the figure choose 1, or choose others  
+blink_ana=0; %if the eye blink will be included in the figure choose 1, or choose others  
+Air_puff=1; %if the air puff will be included in the figure choose 1, or choose others  
+CrossCor=0; %if the cross correlation among signals will be analyzed choose 1
+StackOrOverlap=1; %if the signals will be placed in staks choose 1; if the signals will be placed overlapped choose 2
+PlotMean=1; %if plot the mean of data
+plotArea=1; %if plot the mean with shaded area as sdv
+
+%n = ROI number I would like to analyze
+n=[1:8 13];
+
+%set color
+linecolor=[0.5 0 0];
+meancolor=[1 0 0];
+
+% linecolor=[0 0 0.5];
+% meancolor=[0 0 1];
+
+%% read aligned velocity data
+[FileName,FolderPath] = uigetfile('*speed.mat','Select aligned speed data');
+load([FilePath,FolderName])
+
+%% read Ca activity data
+for fnumber=1:length(SelectedFile)
+        if iscell(FileName)
+            FN=cat(1,FN,FileName{fnumber});
+        else
+            FN=cat(1,FN,FileName);
+        end
+        FP=cat(1,FP,FolderPath);
+        if strfind(FN{end},'csv')
+            Import_data=importdata([FP{end},FN{end}]);
+            signal=cat(3,signal,Import_data.data(:,3+(n-1)*2));
+        else
+            Import_data=load([FP{end},FN{end}]);
+            signal=cat(3,signal,Import_data.activs(:,n));
+        end
+end
+    
+%% get time variables from file
+    %                     load(['D:\2pdata\Ting\GCaMP 20190820\820','\820_000_001','_ball.mat']);% load time dataset
+    if isfile([FP{1},FN{1}(1:11),'_ball.mat'])
+        load([FP{1},FN{1}(1:11),'_ball.mat']);
+        balltime=time;
+    elseif isfile([FP{1},FN{1}(1:11),'_eye.mat'])
+        load([FP{1},FN{1}(1:11),'_eye.mat']);
+    end
+    
+    % if its's concatenated data, FramePerFile is the frame number of each
+    % recording
+    load([FP{1},FN{1}(1:11),'.mat']);
+    FramePerFile=info.config.frames;
+    
+    
+    % ratio of camera sampling rate and 2P sampling rate
+    step=round(size(time,1)./FramePerFile);
+    %time of the 2P signal
+    time=time(1:step:step.*FramePerFile);
+    FrameRate=mean(1./(time(2:end)-time(1:end-1)));
+    
+    % for concatenated data
+    timestep=time;
+    for ext_time=1:round(size(signal,1)/size(time,1))-1
+        time=[time;time(end)+timestep];
+    end   

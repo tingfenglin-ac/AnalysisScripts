@@ -1,0 +1,68 @@
+function raw_trace(i,i_length,ProtNumber,tit,xscale,yscale,grating_frq,xBAR,yBAR,Yposition,Nproto,scaleBAR)
+LINEWIDTH=1.5;
+FONT=22;
+TICK=-30:15:30;
+
+%10v sqaure symmetry
+[fileName,pathName] = uigetfile('*.mat');
+load([pathName,fileName]);
+
+[choice]=L_R_analysis();
+LR='lr';
+l_r=LR(choice);
+
+% stimulus velocity
+if 0
+StimVelPro(ProtNumber);
+set(gco,'LineWidth',LINEWIDTH);
+ylim(yscale);
+set(gca,'YTick',min(ylim):15:max(ylim),...
+    'YColor','r',...
+    'LineWidth',LINEWIDTH,...
+    'FontSize',FONT,...
+    'YTick',TICK);
+hold on
+yyaxis left
+end
+
+
+plot(data.(['time_',l_r])/60,data.([l_r,'eye_raw']),'k','LineWidth',LINEWIDTH);
+xlim(xscale);
+ylim(yscale);
+hold on
+
+
+if any(Nproto(:) == i);
+%if protocol is WT protocol fish =0, if protocol is bel protocol fish= any
+%number
+PlotProtocol(grating_frq,ProtNumber,Yposition,0);
+end
+
+ylabel({'Eye position (deg)'},'FontSize',12);
+set(gca, 'YTick',TICK,...
+    'YColor','k',...
+    'FontSize',FONT);
+
+% Scale bar
+ set(gca,'xtick',[],...
+ 'xcolor',[1 1 1],...
+ 'LineWidth',LINEWIDTH);
+ Barwidth=10; %how long the scale bar should be reciprocol of whole xaxis 
+if any(scaleBAR(:) == i);
+ScaleBar(xlim,ylim,Barwidth,xBAR,yBAR);
+end
+
+% label saccade direction
+if 1
+[PosIdx,NegIdx]=SaccDir(data,l_r);
+TIME=data.(['time_',l_r])/60;
+eye_raw=data.([l_r,'eye_raw']);
+plot(TIME(PosIdx),eye_raw(PosIdx),'ro');
+hold on
+plot(TIME(NegIdx),eye_raw(NegIdx),'go');
+end
+
+title(tit,'fontsize',FONT,'fontweight','bold')
+P = get(gcf,'Position');
+set(get(gca,'title'),'Position',[min(xlim)-0.002*P(3) 30 1.00011])
+box off
