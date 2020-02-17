@@ -1,5 +1,6 @@
 % insert the roi would like to analyze to n
 % mark spike timing of different ROI from one file-20200123
+% output structure: spike initiation idx, spike amp, spike peak idx, spike peak amp, nan (1=nan,0 is not) 
 clear
 addpath(genpath('C:\Users\teamo\Google Drive\UChicago\Hansel lab\databackup'));
 
@@ -16,7 +17,7 @@ plotArea=1; %if plot the mean with shaded area as sdv
 
 
 %n = ROI number I would like to analyze
-n=[1 3 5 7 8 9];
+n=[2 3 5 8];
 
 % if different ROI are from the same cell and want to merge ROIs to one
 % signal
@@ -145,7 +146,10 @@ end
 %                 0.800000000000000,0.921568627450980,0.772549019607843;...
 %                 0.878431372549020,0.952941176470588,0.858823529411765]);
 %             set(groot,'defaultAxesColorOrder',co);
-            
+
+
+
+
     for nfile=1:size(signal,3)
         %background correction
         BC_signal=cat(3,BC_signal,FBackCorr(signal(:,:,nfile),FrameRate));  
@@ -157,28 +161,28 @@ end
             incre=increvalue.*(1:size(signal,2)); %plot the signal from top to down
 
         for i=1:size(signal,2)
-            
-            
             plot(time,BC_signal(:,i,nfile)+incre(i),'linewidth',2);
-%             ,'color',LC(nfile,:)
-yticks(incre)
-yticklabels(ROIlabel)
+            %             ,'color',LC(nfile,:)
+            yticks(incre)
+            yticklabels(ROIlabel)
             hold on
+                
         end
     end
 
-    
+
 %% select points    
 terminate_key = 'T'; 
 delete_prev_key = 'D'; 
 add_key = 'A';
 thatanan_key = 'N'; 
+reanalysis_key = 'R';
 keystroke = 'G'; 
 outputdata=[];
 hold on;
 point_plot = [];
-title(sprintf('Press A to add, %s to add NaN, %s to delete , %s to terminate',...
-    thatanan_key,delete_prev_key, terminate_key));
+title(sprintf('Press R to reanalize, %s to add, %s to add NaN, %s to delete , %s to terminate',...
+    add_key,thatanan_key,delete_prev_key, terminate_key));
 
 while ~strcmpi(keystroke, terminate_key)
     
@@ -188,6 +192,23 @@ while ~strcmpi(keystroke, terminate_key)
     keystroke = upper(get(gcf, 'CurrentCharacter'));
     
     switch keystroke
+        case reanalysis_key % if want to reanalize data
+            [outmatName,outmatPath] = uigetfile({'*ca_timing.mat'},'Select an old timing data');
+            if outmatName~=0
+                load([outmatPath,outmatName],'outputmat');
+                for nfile=1:size(signal,3)
+                    for i=1:size(signal,2)
+                        olddata=outputmat{i,1};
+                        outputdata=[outputdata;...
+                            time(olddata(:,1))',...
+                            BC_signal(olddata(:,1),i,nfile)+incre(i),...
+                            time(olddata(:,2))',...
+                            BC_signal(olddata(:,2),i,nfile)+incre(i),...
+                            i.*ones(size(olddata,1),1),...
+                            olddata(:,3)];
+                    end
+                end
+            end
         case add_key
             zoom off; % to escape the zoom mode
             rect = ginput(2);            
@@ -222,13 +243,12 @@ while ~strcmpi(keystroke, terminate_key)
             d_roi=find(outputdata(:,5)==d_idxroi);
             [~,d_idx]=min(abs(mean(outputdata(d_roi,[1 3]),2)-d_idxtime));
             
-            outputdata(d_roi(d_idx),:) = [];            
-% outputdata(end,:) = [];  
-    end   
+            outputdata(d_roi(d_idx),:) = [];     
+    end
     
+
     delete(point_plot);
-    
-    
+
     is_nan_values = outputdata(:,6) == 1;
     
     if any(~is_nan_values)
@@ -251,7 +271,9 @@ outputmat = cell(max(outputdata(:,5)), 1);
 %% sorting
 for roi=1:max(outputdata(:,5))
     [~,I]=sort(outputdata(outputdata(:,5)==roi,1));
-outputmat{roi}=outputdata(outputdata(:,5)==roi,[1 3 6]);
+    outputdata(outputdata(:,5)==roi,[2 4])=outputdata(outputdata(:,5)==roi,[2 4])-increvalue.*outputdata(outputdata(:,5)==roi,5);
+outputmat{roi}=outputdata(outputdata(:,5)==roi,[1:4 6]);
+
 outputmat{roi}=outputmat{roi}(I,:);
 
 end
@@ -270,4 +292,5 @@ roi_number = n;
 file_name_to_save = sprintf('%s%s_ca_timing.mat', ...
     regexprep(FileName, '.mat', ''), ...
     sprintf('_%d', roi_number)); 
-save(file_name_to_save, 'outputmat', 'roi_number', 'FileName'); 
+[file,path] = uiputfile(file_name_to_save)
+save([path file], 'outputmat', 'roi_number', 'FileName'); 
