@@ -172,11 +172,8 @@ figure
 x=1:3;
 t=cellfun(@(x,y) x(:,1)-y,SpikeTimeCell,StimTimeCell,'uni',0);
 y=[];
-[1 find(diff(a<0));find(diff(a<0)) length(a)]
 for n=x
-y(n,:)=cellfun(@(a,b) logical(a>window(1) & a<window(2))./b,...
-    t(ConditionCell==n),...
-    FileSizeNumCell(ConditionCell==n));
+y(n,:)=cellfun(@(a,b) logical(a>window(1) & a<window(2))./b,t(ConditionCell==n),FileSizeNumCell(ConditionCell==n));
 end
 
 coNum=2;
