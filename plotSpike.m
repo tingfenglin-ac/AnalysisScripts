@@ -4,19 +4,21 @@ function plotSpike
 % output structure: spike initiation idx, spike amp, spike peak idx, spike peak amp, nan (1=nan,0 is not) 
 clear
 addpath(genpath(pwd));
-
+addpath(genpath('C:\Users\lab\Desktop\scripts'));
 
 %% configure
-ROIgroup=[{1:23} num2cell([1:21 23])];
-ROIlabel=['global' cellfun(@num2str,num2cell([1:21 23]),'uni',0)];
+ROIgroup={[1:6] [7:10] [11:15]};
+ROIlabel=arrayfun(@(a) ['Cell' num2str(a)],1:length(ROIgroup),'uni',0);
+
 
 increvalue=1;
 
     %% create figure
-    UIFigure=figure('Position',[0 50 1000 740])
+    UIFigure=figure('Position',[0 50 1000 740]);
     set(UIFigure,'Units','normalized');
-%     set(UIFigure,'color',[0.8118    0.7059    0.9255])
-
+%     set(UIFigure,'color',[0.7137    0.7098    1.0000])
+%The blue: 182, 181, 255
+%The red: 252, 173, 172
     %% select to create a new file or reanalysis
     answer = questdlg('', ...
         'Load', ...
@@ -26,12 +28,18 @@ increvalue=1;
         case 'Create New Project'
             %% load Ca signal
             [signal,n,FileName]=CreateNew(ROIgroup,ROIlabel);
-            %% stim condition
+                       %% stim condition
+%             load('012_018_003.mat');
+%              load('011_026_000.mat');
             load('003_012_001.mat');
+
             stim=info.frame;
             
             %% get time variables
             % time=1:size(signal,1)';
+%             load('C:\Users\teamo\Google Drive\UChicago\Hansel lab\databackup\scripts\time variables\011_026_010_ball.mat');
+%                     load('D:\2pdata\Ting\time variables\011_026_008_ball')
+%             load('003_012_001.mat');
             load('011_026_010_ball.mat');
             
             time=time(1:size(signal,1));
@@ -43,9 +51,9 @@ increvalue=1;
             [smoothBC_signal]=BCandSmooth(signal,FrameRate,swindow);
 
             %% defaut value config
-            pks_thr=0.09;
+            pks_thr=0.05;
             pks_window=5;
-            vel_thr=1;%1st derivative threshold
+            vel_thr=0.4;%1st derivative threshold
             acc_thr=0.3;%2nd derivative threshold
             lead=0.234;%time of rise leading peak
             accumu_thr=0.08;%threhold to show accumulated signal
@@ -69,7 +77,7 @@ increvalue=1;
             
         NewOld=1;%1=create new project
         case 'Open'
-        [UIFigure]=Reanalysis(UIFigure)
+        [UIFigure]=Reanalysis(UIFigure);
         
         signal=getappdata(UIFigure,'signal');
         smoothBC_signal=getappdata(UIFigure,'smoothBC_signal');
@@ -104,18 +112,19 @@ increvalue=1;
         incre=increvalue.*(1:size(signal,2));
     end
     setappdata(UIFigure,'incre',incre);
+    setappdata(UIAxes,'file',2);
+
     %ploting
-%     yyaxis left;
-    MyGraph=plot(UIAxes,time,smoothBC_signal(:,:,1)+incre,'-','linewidth',2,'color',[.5 .5 .5]);
-    UIAxes.YTick=incre;
-    UIAxes.YTickLabel=ROIlabel;
-    UIAxes.YLabel.String='ROI or cell';
-    UIAxes.XLim = [0 time(end)];
-    ax1_pos = UIAxes.Position; % position of first axes
-    yscale=UIAxes.YLim;
-    set(UIAxes, 'UserData', MyGraph);
-    %set defaut plot info
-    setappdata(UIAxes,'file',1);
+% %     yyaxis left;
+%     MyGraph=plot(UIAxes,time,smoothBC_signal(:,:,1)+incre,'-','linewidth',2,'color',[.5 .5 .5]);
+%     UIAxes.YTick=incre;
+%     UIAxes.YTickLabel=ROIlabel;
+%     UIAxes.YLabel.String='ROI or cell';
+%     UIAxes.XLim = [0 time(end)];
+%     ax1_pos = UIAxes.Position; % position of first axes
+%     yscale=UIAxes.YLim;
+%     set(UIAxes, 'UserData', MyGraph);
+%     %set defaut plot info
     
     
     %second axis forspike numbers
@@ -274,7 +283,7 @@ increvalue=1;
     if NewOld
     % calculate the peak and the rise
     pks_thresholdEditFieldValueChanged(UIAxes,UIFigure,MyApp);
-    ShowriseCheckBoxValueChanged(UIAxes,UIFigure,MyApp);
+%     ShowriseCheckBoxValueChanged(UIAxes,UIFigure,MyApp);
     end
 
     % peak check box
@@ -335,8 +344,8 @@ end
     % store data in gui structure
     setappdata(UIFigure,'smoothBC_signal',smoothBC_signal);
     
-    % Create plot
-    plotPR(UIAxes,UIFigure,MyApp)
+    % recalculate peak and rise, and then plot
+    pks_thresholdEditFieldValueChanged(UIAxes,UIFigure,MyApp);
     end
    
     %% calculate peak
@@ -358,6 +367,20 @@ end
         PKS=cat(1,PKS,pks);
         pksLOCS=cat(1,pksLOCS,locs);
     end
+    %% 
+%         PKS=[];
+%     pksLOCS=olddata.pksLOCS(:,[1:4 6]);
+%     for nfile=1:size(smoothBC_signal,3)
+%         for trace=1:size(smoothBC_signal,2)
+%             pks{trace}=smoothBC_signal(pksLOCS{nfile,trace},trace,nfile)
+%         end
+%         PKS=cat(1,PKS,pks);
+%     end
+    
+    
+    %%
+    
+    
     
     NanLOCS=cellfun(@(x) zeros(size(x)),pksLOCS,'uni',0);
     
@@ -375,6 +398,7 @@ end
     
     %% calculte rise
     function ShowriseCheckBoxValueChanged(UIAxes,UIFigure,MyApp)
+    %%
     smoothBC_signal=getappdata(UIFigure,'smoothBC_signal');
     time=getappdata(UIFigure,'time');
     incre=getappdata(UIFigure,'incre');
@@ -461,6 +485,8 @@ end
     pksLOCS=getappdata(UIFigure,'pksLOCS');
     upLOCS=getappdata(UIFigure,'upLOCS');
     NanLOCS=getappdata(UIFigure,'NanLOCS');
+    pks_thr=getappdata(UIFigure,'pks_thr');
+    
     
     peakCheckBox=MyApp.ShowpeaksCheckBox.Value;
     riseCheckBox=MyApp.ShowriseCheckBox.Value;
@@ -468,16 +494,36 @@ end
     
     file_ref=getappdata(UIAxes,'file');
     file=round(MyApp.Filepopupmenu.Value);
-if file~=file_ref
-    cla(UIAxes);
-    MyGraph=plot(UIAxes,time,smoothBC_signal(:,:,file)+incre,'-','linewidth',2,'color',[.5 .5 .5]);
-    UIAxes.YTick=incre;
-    UIAxes.YTickLabel=ROIlabel;
-    UIAxes.YLabel.String='ROI or cell';
-    UIAxes.XLim = [0 time(end)];
-    set(UIAxes, 'UserData', MyGraph);
-    setappdata(UIAxes,'file',file);
-end
+    swindow = str2num(MyApp.SmoothwindowEditField.String);
+    swindow_ref=getappdata(UIFigure,'swindow');
+    
+    %% plot lines
+    if file~=file_ref|swindow~=swindow_ref
+        %save swindow data
+        setappdata(UIFigure,'swindow',swindow);
+        
+        cla(UIAxes);
+        
+        hold(UIAxes,'on')
+        MyGraph=plot(UIAxes,repmat([time(1);time(end)],1,length(incre)),repmat(incre,2,1)+pks_thr,':','color',[226 118 95]./255);
+        MyGraph=plot(UIAxes,repmat([time(1);time(end)],1,length(incre)),repmat(incre,2,1),'color',[226 118 95]./255);
+        
+        %     plot_colors = lines; %different color of lines
+        plot_colors = repmat([.5 .5 .5],100,1); %the same color of lines
+        for n=1:size(smoothBC_signal(:,:,file),2)
+            MyGraph=plot(UIAxes,time,smoothBC_signal(:,n,file)+incre(n),'-',...
+                'linewidth',2,...
+                'color',plot_colors(n,:));
+        end
+        
+        UIAxes.YTick=incre;
+        UIAxes.YTickLabel=ROIlabel;
+        UIAxes.YLabel.String='ROI or cell';
+        UIAxes.XLim = [0 time(end)];
+        set(UIAxes, 'UserData', MyGraph);
+        setappdata(UIAxes,'file',file);
+        ZoomoutButtonValueChanged(UIAxes, UIFigure)
+    end
     
     Deleteobj=get(MyApp.ax2, 'UserData');
     delete(Deleteobj);
@@ -485,7 +531,7 @@ end
     hold(UIAxes,'on');
     SpikeMarker=plot([]);
     
-    %plot peak
+    %% plot peak
     if peakCheckBox
         x=arrayfun(@(a) time(pksLOCS{file,a}),1:size(PKS,2),'uni',0);
         x=vertcat(x{:});
@@ -512,8 +558,10 @@ end
         x=vertcat(x{:});
         y=arrayfun(@(a) smoothBC_signal(riseLOCS{file,a}(upLOCS{file,a}),a,file)+incre(a),1:size(upLOCS,2),'uni',0);
         y=vertcat(y{:});
+        if x
         SpikeMarker(3)=plot(UIAxes,x,y,...
             'o','linewidth',2,'color',[0.3020 0.3020 1]);
+        end
     end
     
     if NanCheckBox
@@ -574,7 +622,7 @@ end
     MyApp.nd_threholdEditField.Enable='off';
     MyApp.accumu_thrEditField.Enable='off';
     MyApp.ManualCheckBox.Enable='off';
-    MyApp.SaveButton.Enable='off';
+%     MyApp.SaveButton.Enable='off';
     
     %% load information
     smoothBC_signal=getappdata(UIFigure,'smoothBC_signal');
@@ -625,7 +673,8 @@ end
                 [~, b_idxtime] = min(abs(time - rect(1,1)));
                 [~, b_idxroi] = min(abs((BC_signal(b_idxtime,:)+incre)-rect(1,2)));
                 [~, e_idxtime] = min(abs(time - rect(2,1)));
-                [~, e_idxroi] = min(abs((BC_signal(b_idxtime,:)+incre)-rect(2,2)));
+                %                 [~, e_idxroi] = min(abs((BC_signal(e_idxtime,:)+incre)-rect(2,2)));
+                e_idxroi=b_idxroi;
                 
                 riseLOCS{file,b_idxroi}=[riseLOCS{file,b_idxroi};b_idxtime];
                 PKS{file,e_idxroi}=[PKS{file,e_idxroi};BC_signal(e_idxtime,e_idxroi)];
@@ -705,7 +754,7 @@ end
     MyApp.nd_threholdEditField.Enable='on';
     MyApp.accumu_thrEditField.Enable='on';
     MyApp.ManualCheckBox.Enable='on';
-    MyApp.SaveButton.Enable='on';
+%     MyApp.SaveButton.Enable='on';
     
     end
     %%   Button pushed function: OpenButton
@@ -772,7 +821,8 @@ end
             FN=cat(1,FN,FileName);
         end
         FP=cat(1,FP,FolderPath);
-        Import_data=load([FP{end},FN{end}]);
+        %FP{end}
+        Import_data=load([FN{end}]);
         signal=cat(3,signal,Import_data.activs);
     end
     
@@ -789,7 +839,7 @@ end
         
         %% converge
         for group=1:length(ROIgroup)
-            activ(:,group,:)=sum(weight(ROIgroup{group}).*signal(:,ROIgroup{group},:),2)./sum(weight(ROIgroup{group}),2);
+            activ(:,group,:)=sum(weight(ROIgroup{group}).*signal(:,ROIgroup{group},:),2)./sum(weight(ROIgroup{group}),2);         
         end
         signal=activ;
         n=1:length(ROIgroup);
@@ -823,7 +873,7 @@ end
     
     
     
-    
+    %%
     [file,path] = uiputfile('SpikeAna.mat','save spike data')
     if file~=0
         save([path file],'FileName','signal','smoothBC_signal','FrameRate','FileName','time','swindow',...
